@@ -38,7 +38,7 @@ function UnitConverter() {
     setXnv(v);
     const num = parseFloat(v);
     if (!isNaN(num)) {
-      setAtomic(String(Math.round(num * Math.pow(10, COIN_CONFIG.unit_places))));
+      setAtomic(String(Math.round(num * Math.pow(10, COIN_CONFIG.unitPlaces))));
     } else {
       setAtomic("");
     }
@@ -48,7 +48,7 @@ function UnitConverter() {
     setAtomic(v);
     const num = parseInt(v);
     if (!isNaN(num)) {
-      setXnv(String(num / Math.pow(10, COIN_CONFIG.unit_places)));
+      setXnv(String(num / Math.pow(10, COIN_CONFIG.unitPlaces)));
     } else {
       setXnv("");
     }
@@ -98,7 +98,7 @@ function UnitConverter() {
           />
         </div>
         <p className="text-xs" style={{ color: "var(--clr-text-muted)" }}>
-          1 XNV = 10<sup>{COIN_CONFIG.unit_places}</sup> atomic units (piconero)
+          1 XNV = 10<sup>{COIN_CONFIG.unitPlaces}</sup> atomic units (piconero)
         </p>
       </div>
     </motion.div>
