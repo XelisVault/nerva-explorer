@@ -8,7 +8,8 @@ export const COIN_CONFIG = {
   name: "NERVA",
   symbol: "XNV",
   unitPlaces: 12,
-  supplyTotal: 18446744073709551615,
+  // Stored as string because it exceeds Number.MAX_SAFE_INTEGER
+  supplyTotalAtomic: "18446744073709551615",
   blockTarget: 60, // seconds
   updateInterval: 15000, // ms
 } as const;
