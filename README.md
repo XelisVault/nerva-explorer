@@ -1,6 +1,6 @@
 # Nerva Block Explorer
 
-A modern, fast, and feature-rich block explorer for the [Nerva (XNV)](https://nerva.one) cryptocurrency — a privacy-focused, CPU-minable coin built on Cryptonote technology.
+A modern, fast, and feature-rich block explorer for the [Nerva (XNV)](https://nerva.one) cryptocurrency a privacy-focused, CPU-minable coin built on Cryptonote technology.
 
 ![Nerva Explorer](public/explorer/logo-color.png)
 
