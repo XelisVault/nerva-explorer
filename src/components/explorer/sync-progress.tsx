@@ -1,7 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
-
 type Props = {
   height: number;
   targetHeight: number;
@@ -10,19 +8,11 @@ type Props = {
 export default function SyncProgress({ height, targetHeight }: Props) {
   if (targetHeight === 0 || height >= targetHeight) {
     return (
-      <div
-        className="flex items-center gap-2 rounded-lg border px-3 py-2"
-        style={{
-          borderColor: "color-mix(in srgb, #10b981 30%, var(--clr-border))",
-          background: "color-mix(in srgb, #10b981 8%, var(--clr-bg-surface))",
-        }}
-      >
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="#10b981">
+      <div className="flex items-center gap-1.5 text-[11px]" style={{ color: "#10b981" }}>
+        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
           <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
         </svg>
-        <span className="text-xs font-semibold" style={{ color: "#10b981" }}>
-          Synced
-        </span>
+        <span className="font-medium">Synced</span>
       </div>
     );
   }
@@ -31,37 +21,23 @@ export default function SyncProgress({ height, targetHeight }: Props) {
   const remaining = targetHeight - height;
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--clr-text-muted)" }}>
-          Synchronizing
+    <div className="w-full max-w-xs">
+      <div className="flex items-center justify-between mb-0.5">
+        <span className="text-[10px] font-medium" style={{ color: "var(--clr-text-muted)" }}>
+          Syncing
         </span>
-        <span className="text-[10px]" style={{ color: "var(--clr-text-muted)" }}>
-          {remaining.toLocaleString()} blocks remaining
+        <span className="text-[10px] font-mono" style={{ color: "var(--clr-text-muted)" }}>
+          {pct.toFixed(1)}% · {remaining.toLocaleString()} blocks
         </span>
       </div>
-      <div
-        className="relative h-2 rounded-full overflow-hidden"
-        style={{ background: "var(--clr-bg-secondary)" }}
-      >
-        <motion.div
-          className="absolute inset-y-0 left-0 rounded-full"
-          style={{
-            background: "linear-gradient(90deg, var(--brand-teal), var(--brand-purple))",
-          }}
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        />
+      <div className="h-1 rounded-full overflow-hidden" style={{ background: "var(--clr-bg-secondary)" }}>
         <div
-          className="absolute inset-0 shimmer"
-          style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)", backgroundSize: "200% 100%" }}
+          className="h-full rounded-full transition-all duration-500"
+          style={{
+            width: `${pct}%`,
+            background: "var(--clr-accent)",
+          }}
         />
-      </div>
-      <div className="mt-1 text-right">
-        <span className="text-[10px] font-semibold" style={{ color: "var(--clr-accent)" }}>
-          {pct.toFixed(1)}%
-        </span>
       </div>
     </div>
   );

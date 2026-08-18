@@ -1,17 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import {
-  CubeIcon,
-  HashrateIcon,
-  ClockIcon,
-  CoinsIcon,
-  NetworkIcon,
-  DatabaseIcon,
-  ZapIcon,
-  ExchangeIcon,
-} from "./icons";
 import {
   type NetworkInfo,
   type BlockHeader,
@@ -42,17 +31,9 @@ export default function NetworkStats({ networkInfo, blocks, generatedCoins, load
 
   if (loading && !networkInfo) {
     return (
-      <section id="network" className="py-8">
+      <section className="py-4">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="h-24 rounded-xl shimmer"
-                style={{ background: "var(--clr-bg-surface)" }}
-              />
-            ))}
-          </div>
+          <div className="h-20 rounded-lg shimmer" style={{ background: "var(--clr-bg-surface)" }} />
         </div>
       </section>
     );
@@ -60,140 +41,56 @@ export default function NetworkStats({ networkInfo, blocks, generatedCoins, load
 
   if (!networkInfo) return null;
 
-  const hashrate = formatHashrate(networkInfo.difficulty);
-  const solveTime = averageSolveTime(blocks);
-  const circulating = generatedCoins;
   const lastBlock = blocks[0];
   const lastReward = lastBlock ? decimalUnits(lastBlock.reward) : 0;
   const lastBlockAgo = lastBlock ? now - lastBlock.timestamp : 0;
+  const solveTime = averageSolveTime(blocks);
+  const circulating = generatedCoins;
 
   const stats = [
-    {
-      label: "Height",
-      value: networkInfo.height.toLocaleString(),
-      icon: CubeIcon,
-      color: "var(--brand-teal)",
-      sub: lastBlockAgo > 0 ? (lastBlockAgo < 120 ? `${lastBlockAgo}s ago` : `${Math.floor(lastBlockAgo / 60)}m ago`) : "",
-    },
-    {
-      label: "Hashrate",
-      value: hashrate,
-      icon: HashrateIcon,
-      color: "#10b981",
-      sub: `Diff ${displayUnits(networkInfo.difficulty, 2)}`,
-    },
-    {
-      label: "Avg Solve",
-      value: solveTime ? `${solveTime.toFixed(1)}s` : "—",
-      icon: ClockIcon,
-      color: "var(--brand-indigo)",
-      sub: `Target ${networkInfo.target}s`,
-    },
-    {
-      label: "TX Count",
-      value: networkInfo.tx_count.toLocaleString(),
-      icon: ExchangeIcon,
-      color: "#f59e0b",
-      sub: `Pool ${networkInfo.tx_pool_size}`,
-    },
-    {
-      label: "Supply",
-      value: circulating > 0 ? circulating.toLocaleString(undefined, { maximumFractionDigits: 0 }) : "—",
-      unit: "XNV",
-      icon: CoinsIcon,
-      color: "var(--brand-purple)",
-      sub: "Tail emission",
-    },
-    {
-      label: "Reward",
-      value: lastReward.toFixed(4),
-      unit: "XNV",
-      icon: ZapIcon,
-      color: "#10b981",
-      sub: "Per block",
-    },
-    {
-      label: "Network",
-      value: networkInfo.nettype.toUpperCase(),
-      icon: NetworkIcon,
-      color: "#06b6d4",
-      sub: `v${lastBlock?.major_version || "?"}.${lastBlock?.minor_version || "?"}`,
-    },
-    {
-      label: "DB Size",
-      value: displayUnits(networkInfo.database_size, 2) + "B",
-      icon: DatabaseIcon,
-      color: "#ec4899",
-      sub: "On disk",
-    },
+    { label: "Height", value: networkInfo.height.toLocaleString() },
+    { label: "Hashrate", value: formatHashrate(networkInfo.difficulty) },
+    { label: "Difficulty", value: displayUnits(networkInfo.difficulty, 2) },
+    { label: "Avg Solve", value: solveTime ? `${solveTime.toFixed(1)}s` : "—" },
+    { label: "TX Count", value: networkInfo.tx_count.toLocaleString() },
+    { label: "Mempool", value: networkInfo.tx_pool_size.toString() },
+    { label: "Supply", value: circulating > 0 ? `${circulating.toLocaleString(undefined, { maximumFractionDigits: 0 })} XNV` : "—" },
+    { label: "Reward", value: `${lastReward.toFixed(4)} XNV` },
   ];
 
   return (
-    <section id="network" className="py-8">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Top row: Block clock + sync progress */}
-        <div className="mb-6 flex flex-wrap items-center gap-6 rounded-xl border p-4"
-          style={{
-            borderColor: "var(--clr-border)",
-            background: "var(--clr-bg-surface)",
-          }}
-        >
+    <section id="network" className="py-4">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-3">
+        {/* Status bar: block clock + sync */}
+        <div className="flex flex-wrap items-center gap-4 rounded-lg border px-4 py-2.5"
+          style={{ borderColor: "var(--clr-border)", background: "var(--clr-bg-surface)" }}>
           <BlockClock
             lastBlockTimestamp={lastBlock ? lastBlock.timestamp : null}
             blockTarget={COIN_CONFIG.blockTarget}
           />
-          <div className="hidden sm:block h-12 w-px" style={{ background: "var(--clr-border)" }} />
-          <div className="flex-1 min-w-[200px]">
-            <SyncProgress
-              height={networkInfo.height}
-              targetHeight={networkInfo.target_height}
-            />
+          <div className="hidden sm:block h-6 w-px" style={{ background: "var(--clr-border)" }} />
+          <div className="flex-1 min-w-[150px]">
+            <SyncProgress height={networkInfo.height} targetHeight={networkInfo.target_height} />
+          </div>
+          <div className="hidden sm:block h-6 w-px" style={{ background: "var(--clr-border)" }} />
+          <div className="text-[11px] font-mono" style={{ color: "var(--clr-text-muted)" }}>
+            {lastBlockAgo > 0 ? (lastBlockAgo < 120 ? `${lastBlockAgo}s ago` : `${Math.floor(lastBlockAgo / 60)}m ago`) : ""}
           </div>
         </div>
 
-        {/* Stat cards */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat, i) => {
-            const Icon = stat.icon;
-            return (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.04 }}
-                className="rounded-xl border p-3.5 transition-colors hover:border-[var(--clr-accent)]"
-                style={{
-                  borderColor: "var(--clr-border-light)",
-                  background: "var(--clr-bg-surface)",
-                }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon
-                    className="h-4 w-4"
-                    style={{ color: stat.color }}
-                  />
-                  <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--clr-text-muted)" }}>
-                    {stat.label}
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-lg font-bold" style={{ color: "var(--clr-text)" }}>
-                    {stat.value}
-                  </span>
-                  {stat.unit && (
-                    <span className="text-[10px] font-medium" style={{ color: "var(--clr-text-muted)" }}>
-                      {stat.unit}
-                    </span>
-                  )}
-                </div>
-                {stat.sub && (
-                  <div className="mt-0.5 text-[10px]" style={{ color: "var(--clr-text-subtle)" }}>
-                    {stat.sub}
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
+        {/* Compact stat grid - monochrome, no icons */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-px rounded-lg overflow-hidden border"
+          style={{ borderColor: "var(--clr-border)", background: "var(--clr-border)" }}>
+          {stats.map((stat) => (
+            <div key={stat.label} className="px-3 py-2" style={{ background: "var(--clr-bg-surface)" }}>
+              <div className="text-[10px] mb-0.5" style={{ color: "var(--clr-text-subtle)" }}>
+                {stat.label}
+              </div>
+              <div className="text-sm font-mono font-medium truncate" style={{ color: "var(--clr-text)" }}>
+                {stat.value}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>

@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 type Props = {
@@ -23,58 +22,41 @@ export default function BlockClock({ lastBlockTimestamp, blockTarget }: Props) {
 
   if (!lastBlockTimestamp) return null;
 
-  const progress = Math.min(elapsed / blockTarget, 1.2);
+  const progress = Math.min(elapsed / blockTarget, 1);
   const isOverdue = elapsed > blockTarget;
-  const isWarning = elapsed > blockTarget * 1.5;
 
-  const color = isWarning ? "#ef4444" : isOverdue ? "#f59e0b" : "#10b981";
-  const radius = 28;
+  const radius = 14;
   const circumference = 2 * Math.PI * radius;
-  const dashOffset = circumference * (1 - Math.min(progress, 1));
+  const dashOffset = circumference * (1 - progress);
 
   return (
-    <div className="flex items-center gap-3">
-      <div className="relative w-[72px] h-[72px] flex-shrink-0">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 72 72">
+    <div className="flex items-center gap-2.5">
+      <div className="relative w-8 h-8 flex-shrink-0">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
           <circle
-            cx="36"
-            cy="36"
-            r={radius}
+            cx="18" cy="18" r={radius}
             fill="none"
             stroke="var(--clr-border)"
-            strokeWidth="4"
+            strokeWidth="2.5"
           />
-          <motion.circle
-            cx="36"
-            cy="36"
-            r={radius}
+          <circle
+            cx="18" cy="18" r={radius}
             fill="none"
-            stroke={color}
-            strokeWidth="4"
+            stroke={isOverdue ? "#f59e0b" : "var(--clr-accent)"}
+            strokeWidth="2.5"
             strokeLinecap="round"
             strokeDasharray={circumference}
-            animate={{ strokeDashoffset: dashOffset, stroke: color }}
-            transition={{ duration: 0.5, ease: "linear" }}
+            strokeDashoffset={dashOffset}
+            style={{ transition: "stroke-dashoffset 0.5s linear, stroke 0.3s" }}
           />
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-lg font-bold" style={{ color: "var(--clr-text)" }}>
-            {elapsed}s
-          </span>
-          <span className="text-[8px] uppercase tracking-wider" style={{ color: "var(--clr-text-muted)" }}>
-            {isOverdue ? "overdue" : "ago"}
-          </span>
-        </div>
       </div>
       <div>
-        <div className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--clr-text-muted)" }}>
-          Last Block
+        <div className="text-sm font-mono font-medium" style={{ color: "var(--clr-text)" }}>
+          {elapsed}s
         </div>
-        <div className="text-sm" style={{ color: "var(--clr-text)" }}>
-          Target: {blockTarget}s
-        </div>
-        <div className="text-[10px] mt-0.5" style={{ color }}>
-          {isWarning ? "Significantly overdue" : isOverdue ? "Slightly overdue" : "On schedule"}
+        <div className="text-[10px]" style={{ color: "var(--clr-text-subtle)" }}>
+          since last block
         </div>
       </div>
     </div>
