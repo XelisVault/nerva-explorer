@@ -1,5 +1,10 @@
 "use client";
 
+import { config } from "@/config/config";
+
+// Footer link columns. The in-page anchors are defined inline (they belong to
+// this explorer); external/community links are sourced from the shared config
+// so forks only need to override config.links.
 const FOOTER_LINKS = [
   {
     title: "Explorer",
@@ -14,21 +19,19 @@ const FOOTER_LINKS = [
   {
     title: "Resources",
     links: [
-      { label: "Website", href: "https://nerva.one" },
-      { label: "Documentation", href: "https://docs.nerva.one" },
-      { label: "Mining Calculator", href: "https://nerva.one/nerva-mining-profitability-calculator/" },
-      { label: "Node Map", href: "https://map.nerva.one/" },
-      { label: "Donate", href: "https://nerva.one/donate/" },
+      { label: "Website", href: config.links.website },
+      { label: "Documentation", href: config.links.docs },
+      { label: "Mining Calculator", href: config.links.miningCalculator },
+      { label: "Node Map", href: config.links.nodeMap },
     ],
   },
   {
     title: "Community",
     links: [
-      { label: "Discord", href: "https://discord.com/invite/jsdbEns/" },
-      { label: "Telegram", href: "https://t.me/NervaCrypto" },
-      { label: "Twitter", href: "http://twitter.com/NervaCurrency" },
-      { label: "Reddit", href: "https://www.reddit.com/r/NervaCrypto" },
-      { label: "GitHub", href: "https://github.com/nerva-project" },
+      { label: "Discord", href: config.links.discord },
+      { label: "Twitter", href: config.links.twitter },
+      { label: "Reddit", href: config.links.reddit },
+      { label: "GitHub", href: config.links.github },
     ],
   },
 ];
@@ -36,7 +39,7 @@ const FOOTER_LINKS = [
 export default function Footer() {
   return (
     <footer
-      className="relative overflow-hidden border-t"
+      className="relative overflow-hidden border-t mt-auto"
       style={{
         background: "var(--clr-bg-secondary)",
         borderColor: "var(--clr-border)",

@@ -11,6 +11,18 @@ type Props = {
   onSelectBlock: (block: BlockHeader) => void;
 };
 
+// Keyboard activation helper: trigger the supplied action on Enter or Space,
+// mirroring native button semantics for our <motion.tr role="button"> rows.
+function rowKeyDown(
+  e: React.KeyboardEvent,
+  action: () => void
+): void {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    action();
+  }
+}
+
 export default function BlocksTable({ blocks, loading, onSelectBlock }: Props) {
   const [filter, setFilter] = useState<"all" | "tx">("all");
 
@@ -95,6 +107,10 @@ export default function BlocksTable({ blocks, loading, onSelectBlock }: Props) {
                           className="tx-row border-t"
                           style={{ borderColor: "var(--clr-border-light)" }}
                           onClick={() => onSelectBlock(block)}
+                          onKeyDown={(e) => rowKeyDown(e, () => onSelectBlock(block))}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`View block #${block.height.toLocaleString()}`}
                         >
                           <td className="px-4 py-3">
                             <span className="font-bold" style={{ color: "var(--clr-accent)" }}>

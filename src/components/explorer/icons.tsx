@@ -1,8 +1,5 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-
 // SVG icons for the explorer - matching Font Awesome style of the original
 
 export function SunIcon(props: React.SVGProps<SVGSVGElement>) {

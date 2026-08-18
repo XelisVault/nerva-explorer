@@ -2,13 +2,13 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
-import { type BlockHeader, formatBlockTime, formatBlockSize, decimalUnits, displayUnits } from "@/lib/nerva-api";
+import { type BlockHeader, type TransactionDetail, formatBlockTime, formatBlockSize, decimalUnits, displayUnits } from "@/lib/nerva-api";
 import { CopyIcon, CheckIcon, CloseIcon, CubeIcon, ExchangeIcon } from "./icons";
 
 type Props = {
   open: boolean;
   block: BlockHeader | null;
-  txDetail: any | null;
+  txDetail: TransactionDetail | null;
   loadingTx: boolean;
   onClose: () => void;
 };
@@ -57,6 +57,9 @@ export default function DetailModal({ open, block, txDetail, loadingTx, onClose 
               borderColor: "var(--clr-border)",
             }}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="detail-modal-title"
           >
             {/* Header */}
             <div
@@ -77,7 +80,7 @@ export default function DetailModal({ open, block, txDetail, loadingTx, onClose 
                   {isTx ? <ExchangeIcon className="h-5 w-5" /> : <CubeIcon className="h-5 w-5" />}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold" style={{ color: "var(--clr-text)" }}>
+                  <h3 id="detail-modal-title" className="text-lg font-bold" style={{ color: "var(--clr-text)" }}>
                     {isTx ? "Transaction" : `Block #${block?.height.toLocaleString() || ""}`}
                   </h3>
                   <p className="text-xs" style={{ color: "var(--clr-text-muted)" }}>
@@ -152,7 +155,7 @@ function Row({
   );
 }
 
-function BlockDetailContent({
+export function BlockDetailContent({
   block,
   copied,
   onCopy,
@@ -229,13 +232,13 @@ function BlockDetailContent({
   );
 }
 
-function TxDetailContent({
+export function TxDetailContent({
   txDetail,
   loading,
   copied,
   onCopy,
 }: {
-  txDetail: any | null;
+  txDetail: TransactionDetail | null;
   loading: boolean;
   copied: string | null;
   onCopy: (text: string, key: string) => void;
@@ -262,10 +265,10 @@ function TxDetailContent({
 
   return (
     <div className="divide-y" style={{ borderColor: "var(--clr-border-light)" }}>
-      <Row label="Tx Hash" copyValue={txDetail.tx_hash || txDetail.id_hash} copyKey="txhash" copied={copied} onCopy={onCopy}>
+      <Row label="Tx Hash" copyValue={txDetail.tx_hash || txDetail.id_hash || ""} copyKey="txhash" copied={copied} onCopy={onCopy}>
         <code className="text-xs">{txDetail.tx_hash || txDetail.id_hash}</code>
       </Row>
-      {txDetail.block_height !== undefined && (
+      {txDetail.block_height != null && (
         <Row label="Block Height" copyValue={String(txDetail.block_height)} copyKey="bh" copied={copied} onCopy={onCopy}>
           <span className="font-bold" style={{ color: "var(--clr-accent)" }}>
             {txDetail.block_height.toLocaleString()}

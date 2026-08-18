@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import {
-  LineChart,
-  Line,
   Area,
   AreaChart,
   Bar,
@@ -13,7 +11,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ComposedChart,
 } from "recharts";
 import { type BlockHeader, COIN_CONFIG, displayUnits } from "@/lib/nerva-api";
 import { ChartIcon } from "./icons";
@@ -99,9 +96,13 @@ export default function NetworkCharts({ blocks }: Props) {
               fontSize: "12px",
             }}
             labelStyle={{ color: "var(--clr-text-muted)" }}
-            formatter={(value: any) => {
-              if (chartType === "hashrate") return [`${displayUnits(value, 2)}H/s`, name];
-              return [displayUnits(value, 2), name];
+            formatter={(value) => {
+              const num =
+                typeof value === "number"
+                  ? value
+                  : parseFloat(String(value ?? "0"));
+              if (chartType === "hashrate") return [`${displayUnits(num, 2)}H/s`, name];
+              return [displayUnits(num, 2), name];
             }}
           />
           <Area

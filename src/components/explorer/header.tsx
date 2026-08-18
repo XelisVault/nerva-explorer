@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SunIcon, MoonIcon, MenuIcon, CloseIcon, SearchIcon } from "./icons";
+import { config } from "@/config/config";
 
 const NAV_ITEMS = [
   { label: "Network", href: "#network" },
@@ -12,11 +13,13 @@ const NAV_ITEMS = [
   { label: "Tools", href: "#tools" },
 ];
 
+// External links shown in the header, sourced from the shared config so
+// forks only need to override config.links to update them everywhere.
 const EXTERNAL_LINKS = [
-  { label: "Website", href: "https://nerva.one" },
-  { label: "Docs", href: "https://docs.nerva.one" },
-  { label: "GitHub", href: "https://github.com/nerva-project" },
-  { label: "Discord", href: "https://discord.com/invite/jsdbEns/" },
+  { label: "Website", href: config.links.website },
+  { label: "Docs", href: config.links.docs },
+  { label: "GitHub", href: config.links.github },
+  { label: "Discord", href: config.links.discord },
 ];
 
 export default function Header({ onSearch }: { onSearch?: (q: string) => void }) {

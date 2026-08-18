@@ -19,7 +19,6 @@ import {
   formatHashrate,
   decimalUnits,
   averageSolveTime,
-  SUPPLY_TOTAL_XNV,
 } from "@/lib/nerva-api";
 
 type Props = {
@@ -30,10 +29,14 @@ type Props = {
 };
 
 export default function NetworkStats({ networkInfo, blocks, generatedCoins, loading }: Props) {
-  const [now, setNow] = useState(Math.floor(Date.now() / 1000));
+  // `now` is the wall-clock second used for "Xs ago" labels. It's seeded via
+  // useEffect (not in the useState initializer) to keep render pure.
+  const [now, setNow] = useState(0);
 
   useEffect(() => {
-    const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    const update = () => setNow(Math.floor(Date.now() / 1000));
+    update();
+    const t = setInterval(update, 1000);
     return () => clearInterval(t);
   }, []);
 
@@ -62,7 +65,6 @@ export default function NetworkStats({ networkInfo, blocks, generatedCoins, load
   const hashrate = formatHashrate(networkInfo.difficulty);
   const solveTime = averageSolveTime(blocks);
   const circulating = generatedCoins; // Already in XNV
-  const emissionPercent = (generatedCoins / SUPPLY_TOTAL_XNV) * 100;
   const lastBlock = blocks[0];
   const lastReward = lastBlock ? decimalUnits(lastBlock.reward) : 0;
   const lastBlockAgo = lastBlock ? now - lastBlock.timestamp : 0;
@@ -103,7 +105,7 @@ export default function NetworkStats({ networkInfo, blocks, generatedCoins, load
       unit: "XNV",
       icon: CoinsIcon,
       color: "var(--brand-purple)",
-      sub: `${emissionPercent.toFixed(2)}% emitted`,
+      sub: "Tail emission active",
     },
     {
       label: "Block Reward",

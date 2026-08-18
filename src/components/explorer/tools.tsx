@@ -3,9 +3,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ToolsIcon, CodeIcon, ZapIcon, CoinsIcon, DownloadIcon } from "./icons";
-import { COIN_CONFIG } from "@/lib/nerva-api";
+import { config } from "@/config/config";
+import {
+  COIN_CONFIG,
+  type NetworkInfo,
+} from "@/lib/nerva-api";
 
-export default function ToolsSection() {
+type ToolsSectionProps = {
+  networkInfo?: NetworkInfo | null;
+};
+
+export default function ToolsSection({ networkInfo }: ToolsSectionProps) {
   return (
     <section id="tools" className="py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -21,7 +29,7 @@ export default function ToolsSection() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <UnitConverter />
-          <MiningCalculator />
+          <MiningCalculator networkInfo={networkInfo} />
           <ApiQuickStart />
           <UsefulLinks />
         </div>
@@ -46,7 +54,7 @@ function UnitConverter() {
 
   const updateAtomic = (v: string) => {
     setAtomic(v);
-    const num = parseInt(v);
+    const num = Number(v);
     if (!isNaN(num)) {
       setXnv(String(num / Math.pow(10, COIN_CONFIG.unitPlaces)));
     } else {
@@ -105,9 +113,21 @@ function UnitConverter() {
   );
 }
 
-function MiningCalculator() {
+type MiningCalculatorProps = {
+  networkInfo?: NetworkInfo | null;
+};
+
+function MiningCalculator({ networkInfo }: MiningCalculatorProps) {
+  // Default to the live network difficulty when available; fall back to a
+  // reasonable constant otherwise. The user can override the value manually
+  // in the input below.
+  const defaultDifficulty =
+    networkInfo?.difficulty !== undefined && networkInfo.difficulty > 0
+      ? String(networkInfo.difficulty)
+      : "2587340";
+
   const [hashrate, setHashrate] = useState("1000");
-  const [difficulty, setDifficulty] = useState("2587340");
+  const [difficulty, setDifficulty] = useState(defaultDifficulty);
 
   const calc = () => {
     const h = parseFloat(hashrate) || 0;
@@ -117,7 +137,8 @@ function MiningCalculator() {
     const expectedTime = d / h;
     // Expected XNV per day = (86400 / expectedTime) * block_reward
     const blocksPerDay = 86400 / expectedTime;
-    const reward = 0.3; // XNV per block
+    // Tail emission reward per block, sourced from config so forks can override.
+    const reward = config.coin.tailEmissionReward;
     return {
       expectedTime,
       blocksPerDay,
@@ -200,7 +221,7 @@ function ApiQuickStart() {
   const [copied, setCopied] = useState(false);
   const code = `// Fetch latest Nerva network info
 const res = await fetch(
-  'https://api.nerva.one/daemon/explorer/index.php?endpoint=get_info'
+  '${config.apiEndpoint}?endpoint=get_info'
 );
 const data = await res.json();
 console.log('Height:', data.height);
@@ -249,7 +270,7 @@ console.log('Difficulty:', data.difficulty);`;
         <code>{code}</code>
       </pre>
       <a
-        href="https://api.nerva.one/daemon/explorer/index.php?endpoint=get_info"
+        href={`${config.apiEndpoint}?endpoint=get_info`}
         target="_blank"
         rel="noreferrer"
         className="mt-3 inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider"
@@ -263,12 +284,12 @@ console.log('Difficulty:', data.difficulty);`;
 
 function UsefulLinks() {
   const links = [
-    { label: "Nerva Website", href: "https://nerva.one", icon: "🌐" },
-    { label: "Documentation", href: "https://docs.nerva.one", icon: "📚" },
-    { label: "GitHub Repository", href: "https://github.com/nerva-project", icon: "🐙" },
-    { label: "Discord Community", href: "https://discord.com/invite/jsdbEns/", icon: "💬" },
-    { label: "Mining Calculator", href: "https://nerva.one/nerva-mining-profitability-calculator/", icon: "⛏️" },
-    { label: "Node Map", href: "https://map.nerva.one/", icon: "🗺️" },
+    { label: "Nerva Website", href: config.links.website, icon: "🌐" },
+    { label: "Documentation", href: config.links.docs, icon: "📚" },
+    { label: "GitHub Repository", href: config.links.github, icon: "🐙" },
+    { label: "Discord Community", href: config.links.discord, icon: "💬" },
+    { label: "Mining Calculator", href: config.links.miningCalculator, icon: "⛏️" },
+    { label: "Node Map", href: config.links.nodeMap, icon: "🗺️" },
   ];
 
   return (

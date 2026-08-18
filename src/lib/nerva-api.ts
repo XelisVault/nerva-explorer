@@ -1,18 +1,19 @@
 // Nerva Explorer API client
 // Mirrors the structure of the original Vue explorer's services/Explorer/explorer.service.js
+//
+// All public API functions accept an optional AbortSignal so callers can cancel
+// in-flight requests (used by the auto-refresh hook to avoid stacking requests
+// and to discard stale responses when the tab is hidden).
 
-const API_BASE = "https://api.nerva.one/daemon/explorer/index.php";
+import { config } from "@/config/config";
 
-// Coin configuration - from original config.js
-export const COIN_CONFIG = {
-  name: "NERVA",
-  symbol: "XNV",
-  unitPlaces: 12,
-  // Stored as string because it exceeds Number.MAX_SAFE_INTEGER
-  supplyTotalAtomic: "18446744073709551615",
-  blockTarget: 60, // seconds
-  updateInterval: 15000, // ms
-} as const;
+// When using the built-in server proxy (recommended), the browser hits /api/rpc
+// and the proxy forwards to config.apiEndpoint. Otherwise the browser calls
+// config.apiEndpoint directly (requires CORS to be open on the upstream).
+const API_BASE = config.useServerProxy ? "/api/rpc" : config.apiEndpoint;
+
+// Coin configuration - exported for use across the app (formatters, tools, etc.)
+export const COIN_CONFIG = config.coin;
 
 // Types
 export type NetworkInfo = {
@@ -72,6 +73,90 @@ export type TxPoolEntry = {
   double_spend_seen: boolean;
 };
 
+// Transaction detail returned by get_transactions.
+// Many fields are optional because in-pool transactions have fewer fields
+// than confirmed transactions (e.g. block_height is null for pool txs).
+export type TransactionDetail = {
+  tx_hash?: string;
+  id_hash?: string;
+  block_height?: number | null;
+  block_timestamp?: number;
+  in_pool?: boolean;
+  fee?: number;
+  tx_size?: number;
+  unlock_time?: number;
+  vin?: unknown[];
+  vout?: unknown[];
+  extra?: string | unknown[];
+};
+
+// ---------------------------------------------------------------------------
+// JSON parsing helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Parse JSON defensively: strip any leading PHP warning HTML or whitespace by
+ * finding the first `{` or `[` character, then JSON.parse the remainder.
+ *
+ * The Nerva upstream API occasionally emits warnings like
+ *   `<br /><b>Warning</b>: Undefined property: stdClass::$foo in /srv/index.php on line 12<br />\n{...}`
+ * before the actual JSON body. A bare `JSON.parse` would choke on those.
+ *
+ * Throws SyntaxError if the remaining text is not valid JSON.
+ */
+export function parseJsonDefensively(text: string): unknown {
+  const jsonStart = text.search(/[{[]/);
+  const cleanText = jsonStart >= 0 ? text.slice(jsonStart) : text;
+  return JSON.parse(cleanText);
+}
+
+type RpcError = { code?: number; message?: string };
+
+/**
+ * Low-level fetch helper used by every public API function below.
+ *
+ * - Uses `parseJsonDefensively` so PHP warnings are stripped.
+ * - Throws when the response body is an `{"error":...}` shape.
+ * - Unwraps `{"result":...}` shapes when caller expects the inner value.
+ *   (Callers that need to distinguish bare arrays from `{"result":[...]}`
+ *   should inspect the parsed value themselves.)
+ */
+async function fetchJSON<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const res = await fetch(url, { cache: "no-store", signal });
+  if (!res.ok) {
+    throw new Error(`Request failed: ${res.status}`);
+  }
+  const text = await res.text();
+  const data = parseJsonDefensively(text);
+
+  // Reject {"error": ...} shapes uniformly across all endpoints.
+  if (
+    data &&
+    typeof data === "object" &&
+    !Array.isArray(data) &&
+    "error" in data
+  ) {
+    const err = (data as { error: RpcError | string }).error;
+    const message =
+      typeof err === "string"
+        ? err
+        : err?.message || "Unknown RPC error";
+    throw new Error(message);
+  }
+
+  return data as T;
+}
+
+/** Build a URL against API_BASE with the given endpoint and query params. */
+function buildUrl(endpoint: string, params?: Record<string, string>): string {
+  const search = new URLSearchParams({ endpoint, ...(params || {}) });
+  return `${API_BASE}?${search.toString()}`;
+}
+
+// ---------------------------------------------------------------------------
+// Formatters (pure, no I/O)
+// ---------------------------------------------------------------------------
+
 // Helper: format display units (k, M, G, T, P, E)
 export function displayUnits(input: number, decimals = 0): string {
   const units = ["", "k", "M", "G", "T", "P", "E"];
@@ -122,129 +207,9 @@ export function formatBlockTime(unix: number): { ago: string; abs: string } {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   });
   return { ago, abs };
-}
-
-// API: get_info
-export async function getInfo(): Promise<NetworkInfo> {
-  const res = await fetch(`${API_BASE}?endpoint=get_info`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`get_info failed: ${res.status}`);
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || "Unknown error");
-  return data as NetworkInfo;
-}
-
-// API: get_block_headers_range
-export async function getBlockHeaders(start: number, end: number): Promise<BlockHeader[]> {
-  const res = await fetch(
-    `${API_BASE}?endpoint=get_block_headers_range&start=${start}&end=${end}`,
-    { cache: "no-store" }
-  );
-  if (!res.ok) throw new Error(`get_block_headers_range failed: ${res.status}`);
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || "Unknown error");
-  return (data.headers || []) as BlockHeader[];
-}
-
-// API: get_transaction_pool
-export async function getTxPool(): Promise<TxPoolEntry[]> {
-  const res = await fetch(`${API_BASE}?endpoint=get_transaction_pool`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`get_transaction_pool failed: ${res.status}`);
-  const data = await res.json();
-  // tx pool returns an array, plus spent_key_images object
-  if (Array.isArray(data)) return data as TxPoolEntry[];
-  if (data.transactions) return data.transactions as TxPoolEntry[];
-  return [];
-}
-
-// API: get_generated_coins
-export async function getGeneratedCoins(height: number): Promise<number> {
-  const res = await fetch(`${API_BASE}?endpoint=get_generated_coins&height=${height}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`get_generated_coins failed: ${res.status}`);
-  // The API returns a plain number, not a JSON object
-  const text = await res.text();
-  const num = parseFloat(text);
-  if (!isNaN(num)) return num;
-  // Try as JSON object just in case
-  try {
-    const data = JSON.parse(text);
-    if (typeof data === "number") return data;
-    if (data && typeof data.generated_coins === "number") return data.generated_coins;
-  } catch {
-    // Not JSON, ignore
-  }
-  return 0;
-}
-
-// API: get_block_header_by_height
-export async function getBlockHeaderByHeight(height: number): Promise<BlockHeader> {
-  const res = await fetch(`${API_BASE}?endpoint=get_block_header_by_height&height=${height}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`get_block_header_by_height failed: ${res.status}`);
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || "Unknown error");
-  return data.block_header as BlockHeader;
-}
-
-// API: get_block_header_by_hash
-export async function getBlockHeaderByHash(hash: string): Promise<BlockHeader> {
-  const res = await fetch(`${API_BASE}?endpoint=get_block_header_by_hash&hash=${hash}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`get_block_header_by_hash failed: ${res.status}`);
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || "Unknown error");
-  return data.block_header as BlockHeader;
-}
-
-// API: get_transactions
-export async function getTransaction(hash: string): Promise<any> {
-  const res = await fetch(`${API_BASE}?endpoint=get_transactions&hash[]=${hash}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`get_transactions failed: ${res.status}`);
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message || "Unknown error");
-  if (Array.isArray(data) && data.length > 0) return data[0];
-  return null;
-}
-
-// Total supply in XNV (computed once)
-// COIN_CONFIG.supplyTotal is in atomic units (uint64 max), so divide by 10^12 to get XNV
-// However, Nerva's actual tail-emission cap is ~18.5M XNV before tail emission kicks in
-export const SUPPLY_TOTAL_XNV = 18446744.073709552; // ~18.4M XNV
-
-// Utility: derive supply stats from network info
-// Note: getGeneratedCoins endpoint returns XNV already (not atomic units), unlike block rewards
-export function deriveSupply(networkInfo: NetworkInfo | null, generatedCoinsXNV: number) {
-  if (!networkInfo) {
-    return { total: SUPPLY_TOTAL_XNV, circulating: 0, emissionPercent: 0, reward: 0 };
-  }
-  // generatedCoinsXNV is already in XNV (from API), so use directly
-  const circulating = generatedCoinsXNV;
-  const emissionPercent = (generatedCoinsXNV / SUPPLY_TOTAL_XNV) * 100;
-  return {
-    total: SUPPLY_TOTAL_XNV,
-    circulating,
-    emissionPercent,
-    reward: 0, // filled later from latest block
-  };
-}
-
-// Utility: derive network stats
-export function deriveNetStats(networkInfo: NetworkInfo | null) {
-  if (!networkInfo) return { difficulty: "—", hashrate: "—", txCount: 0 };
-  return {
-    difficulty: displayUnits(networkInfo.difficulty, 2),
-    hashrate: formatHashrate(networkInfo.difficulty),
-    txCount: networkInfo.tx_count,
-    rawDifficulty: networkInfo.difficulty,
-  };
 }
 
 // Utility: average solve time from blocks
@@ -274,4 +239,129 @@ export function buildBlockChartData(blocks: BlockHeader[]) {
     lastTime = b.timestamp;
   }
   return { hashrateData, blockTimeData };
+}
+
+// ---------------------------------------------------------------------------
+// RPC API functions
+// ---------------------------------------------------------------------------
+
+// API: get_info
+export async function getInfo(signal?: AbortSignal): Promise<NetworkInfo> {
+  return fetchJSON<NetworkInfo>(buildUrl("get_info"), signal);
+}
+
+// API: get_block_headers_range
+export async function getBlockHeaders(
+  start: number,
+  end: number,
+  signal?: AbortSignal
+): Promise<BlockHeader[]> {
+  const data = await fetchJSON<
+    BlockHeader[] | { headers?: BlockHeader[] }
+  >(
+    buildUrl("get_block_headers_range", {
+      start: String(start),
+      end: String(end),
+    }),
+    signal
+  );
+  if (Array.isArray(data)) return data;
+  return data.headers || [];
+}
+
+// API: get_transaction_pool
+export async function getTxPool(signal?: AbortSignal): Promise<TxPoolEntry[]> {
+  const data = await fetchJSON<
+    TxPoolEntry[] | { transactions?: TxPoolEntry[] }
+  >(buildUrl("get_transaction_pool"), signal);
+  if (Array.isArray(data)) return data;
+  return data.transactions || [];
+}
+
+// API: get_generated_coins
+// The upstream returns either a plain number or {"generated_coins": N}.
+// Returns 0 on any parse failure (the value is non-critical for the UI).
+export async function getGeneratedCoins(
+  height: number,
+  signal?: AbortSignal
+): Promise<number> {
+  try {
+    const data = await fetchJSON<number | { generated_coins?: number }>(
+      buildUrl("get_generated_coins", { height: String(height) }),
+      signal
+    );
+    if (typeof data === "number") return data;
+    if (
+      data &&
+      typeof data === "object" &&
+      typeof data.generated_coins === "number"
+    ) {
+      return data.generated_coins;
+    }
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+// API: get_block_header_by_height
+export async function getBlockHeaderByHeight(
+  height: number,
+  signal?: AbortSignal
+): Promise<BlockHeader> {
+  const data = await fetchJSON<{ block_header?: BlockHeader }>(
+    buildUrl("get_block_header_by_height", { height: String(height) }),
+    signal
+  );
+  if (!data.block_header) {
+    throw new Error("Block header not found");
+  }
+  return data.block_header;
+}
+
+// API: get_block_header_by_hash
+// The hash is user-supplied (from search) so it MUST be URL-encoded to avoid
+// characters like # or & truncating or polluting the query string.
+export async function getBlockHeaderByHash(
+  hash: string,
+  signal?: AbortSignal
+): Promise<BlockHeader> {
+  const data = await fetchJSON<{ block_header?: BlockHeader }>(
+    buildUrl("get_block_header_by_hash", { hash }),
+    signal
+  );
+  if (!data.block_header) {
+    throw new Error("Block header not found");
+  }
+  return data.block_header;
+}
+
+// API: get_transactions
+// The upstream returns either:
+//   - a bare array (in-pool txs sometimes come back this way, possibly with
+//     a PHP warning prefix),
+//   - {"result": [...]},
+//   - {"error": {...}} (handled by fetchJSON).
+// Returns null when no matching transaction is found.
+export async function getTransaction(
+  hash: string,
+  signal?: AbortSignal
+): Promise<TransactionDetail | null> {
+  const data = await fetchJSON<
+    TransactionDetail[] | { result?: TransactionDetail[] }
+  >(buildUrl("get_transactions", { "hash[]": hash }), signal);
+
+  let arr: TransactionDetail[];
+  if (Array.isArray(data)) {
+    arr = data;
+  } else if (
+    data &&
+    typeof data === "object" &&
+    Array.isArray(data.result)
+  ) {
+    arr = data.result;
+  } else {
+    arr = [];
+  }
+  return arr.length > 0 ? arr[0] : null;
 }

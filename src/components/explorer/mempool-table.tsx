@@ -10,6 +10,32 @@ type Props = {
   onSelectTx: (hash: string) => void;
 };
 
+// Format a mempool entry's receive_time. Pool entries that have not yet been
+// relayed may report receive_time === 0; show those as "Pending" rather than
+// the epoch.
+function formatPoolTime(receiveTime: number): string {
+  if (receiveTime === 0) return "Pending";
+  return new Date(receiveTime * 1000).toLocaleString("en-US", {
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+}
+
+// Keyboard activation helper: trigger the supplied action on Enter or Space,
+// mirroring native button semantics for our <motion.tr role="button"> rows.
+function rowKeyDown(
+  e: React.KeyboardEvent,
+  action: () => void
+): void {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    action();
+  }
+}
+
 export default function MempoolTable({ txPool, loading, onSelectTx }: Props) {
   return (
     <section id="mempool" className="py-12">
@@ -64,7 +90,7 @@ export default function MempoolTable({ txPool, loading, onSelectTx }: Props) {
                           </tr>
                         ))
                       : txPool.map((tx, i) => {
-                          const time = new Date(tx.receive_time * 1000);
+                          const time = formatPoolTime(tx.receive_time);
                           return (
                             <motion.tr
                               key={tx.id_hash}
@@ -74,9 +100,13 @@ export default function MempoolTable({ txPool, loading, onSelectTx }: Props) {
                               className="tx-row border-t"
                               style={{ borderColor: "var(--clr-border-light)" }}
                               onClick={() => onSelectTx(tx.id_hash)}
+                              onKeyDown={(e) => rowKeyDown(e, () => onSelectTx(tx.id_hash))}
+                              tabIndex={0}
+                              role="button"
+                              aria-label={`View transaction ${tx.id_hash}`}
                             >
                               <td className="px-4 py-3 text-sm whitespace-nowrap" style={{ color: "var(--clr-text)" }}>
-                                {time.toLocaleString("en-US", { hour12: false, month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                                {time}
                               </td>
                               <td className="px-4 py-3">
                                 <span className="hash hash-truncate" style={{ color: "var(--clr-accent)", maxWidth: 320 }}>
@@ -99,7 +129,7 @@ export default function MempoolTable({ txPool, loading, onSelectTx }: Props) {
               {/* Mobile cards */}
               <div className="md:hidden divide-y" style={{ borderColor: "var(--clr-border-light)" }}>
                 {txPool.map((tx) => {
-                  const time = new Date(tx.receive_time * 1000);
+                  const time = formatPoolTime(tx.receive_time);
                   return (
                     <button
                       key={tx.id_hash}
@@ -108,7 +138,7 @@ export default function MempoolTable({ txPool, loading, onSelectTx }: Props) {
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs" style={{ color: "var(--clr-text-muted)" }}>
-                          {time.toLocaleString("en-US", { hour12: false, month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          {time}
                         </span>
                         <span className="text-sm font-semibold" style={{ color: "var(--clr-text)" }}>
                           {decimalUnits(tx.fee).toFixed(6)} XNV
