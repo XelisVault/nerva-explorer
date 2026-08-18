@@ -16,10 +16,8 @@ const NAV_ITEMS = [
 // External links shown in the header, sourced from the shared config so
 // forks only need to override config.links to update them everywhere.
 const EXTERNAL_LINKS = [
-  { label: "Website", href: config.links.website },
   { label: "Docs", href: config.links.docs },
   { label: "GitHub", href: config.links.github },
-  { label: "Discord", href: config.links.discord },
 ];
 
 export default function Header({ onSearch }: { onSearch?: (q: string) => void }) {
@@ -148,11 +146,11 @@ export default function Header({ onSearch }: { onSearch?: (q: string) => void })
               href={link.href}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1 rounded-full px-2.5 py-2 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-[var(--clr-bg-hover)]"
+              className="flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium transition-colors hover:bg-[var(--clr-bg-hover)]"
               style={{ color: "var(--clr-text-muted)" }}
               title={link.label}
             >
-              {link.label === "GitHub" ? "GH" : link.label === "Discord" ? "DC" : link.label.slice(0, 2)}
+              {link.label}
             </a>
           ))}
 
