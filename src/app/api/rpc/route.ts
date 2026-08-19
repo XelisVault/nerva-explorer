@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { config } from "@/config/config";
 
 // Server-side API proxy: forwards requests to the upstream Nerva RPC API.
-// Benefits: avoids CORS issues, adds caching, timeout, and strips PHP warnings.
+// Benefits: avoids CORS issues, adds caching for cacheable endpoints,
+// timeout, and strips PHP warnings.
+
+// Endpoints that return real-time state and must NOT be cached.
+// get_info changes every block (height, difficulty, tx_pool_size, etc.)
+// get_transaction_pool changes whenever a tx enters or leaves the mempool.
+const NO_CACHE_ENDPOINTS = new Set(["get_info", "get_transaction_pool"]);
 
 export const dynamic = "force-dynamic";
-export const revalidate = 10; // Cache for 10 seconds
 
 export async function GET(request: NextRequest) {
   const endpoint = request.nextUrl.searchParams.get("endpoint");
@@ -20,6 +25,14 @@ export async function GET(request: NextRequest) {
   const params = new URLSearchParams(request.nextUrl.searchParams);
   const url = `${config.apiEndpoint}?${params.toString()}`;
 
+  // Per-endpoint cache policy:
+  // - Real-time endpoints (get_info, get_transaction_pool): no-store
+  // - Everything else (block headers, generated coins, etc.): cache 10s
+  const isNoCache = NO_CACHE_ENDPOINTS.has(endpoint);
+  const cacheControl = isNoCache
+    ? "no-store"
+    : "public, s-maxage=10, stale-while-revalidate=30";
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -27,6 +40,9 @@ export async function GET(request: NextRequest) {
     const res = await fetch(url, {
       signal: controller.signal,
       headers: { Accept: "application/json" },
+      // Don't let Next.js cache the upstream fetch; we set our own
+      // Cache-Control on the response below.
+      cache: "no-store",
     });
     clearTimeout(timeout);
 
@@ -44,7 +60,7 @@ export async function GET(request: NextRequest) {
       status: res.status,
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
+        "Cache-Control": cacheControl,
       },
     });
   } catch (e) {

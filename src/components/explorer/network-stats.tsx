@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   type NetworkInfo,
   type BlockHeader,
@@ -21,13 +20,9 @@ type Props = {
 };
 
 export default function NetworkStats({ networkInfo, blocks, generatedCoins, loading }: Props) {
-  const [now, setNow] = useState(0);
-
-  useEffect(() => {
-    setNow(Math.floor(Date.now() / 1000));
-    const t = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(t);
-  }, []);
+  // No longer need a `now` ticker here — BlockClock manages its own
+  // per-second timer. We only need the stat values, which come from
+  // the parent via props.
 
   if (loading && !networkInfo) {
     return (
@@ -43,7 +38,6 @@ export default function NetworkStats({ networkInfo, blocks, generatedCoins, load
 
   const lastBlock = blocks[0];
   const lastReward = lastBlock ? decimalUnits(lastBlock.reward) : 0;
-  const lastBlockAgo = lastBlock ? now - lastBlock.timestamp : 0;
   const solveTime = averageSolveTime(blocks);
   const circulating = generatedCoins;
 
@@ -71,10 +65,6 @@ export default function NetworkStats({ networkInfo, blocks, generatedCoins, load
           <div className="hidden sm:block h-6 w-px" style={{ background: "var(--clr-border)" }} />
           <div className="flex-1 min-w-[150px]">
             <SyncProgress height={networkInfo.height} targetHeight={networkInfo.target_height} />
-          </div>
-          <div className="hidden sm:block h-6 w-px" style={{ background: "var(--clr-border)" }} />
-          <div className="text-[11px] font-mono" style={{ color: "var(--clr-text-muted)" }}>
-            {lastBlockAgo > 0 ? (lastBlockAgo < 120 ? `${lastBlockAgo}s ago` : `${Math.floor(lastBlockAgo / 60)}m ago`) : ""}
           </div>
         </div>
 

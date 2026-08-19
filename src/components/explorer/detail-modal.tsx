@@ -1,8 +1,9 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { type BlockHeader, type TransactionDetail, formatBlockTime, formatBlockSize, decimalUnits, displayUnits } from "@/lib/nerva-api";
+import { config } from "@/config/config";
 import { CopyIcon, CheckIcon, CloseIcon, CubeIcon, ExchangeIcon } from "./icons";
 
 type Props = {
@@ -15,14 +16,51 @@ type Props = {
 
 export default function DetailModal({ open, block, txDetail, loadingTx, onClose }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
+  // Handle Escape key, focus management, and focus trap.
   useEffect(() => {
     if (!open) return;
-    const onEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+
+    // Capture the element that had focus before the modal opened,
+    // so we can restore it when the modal closes.
+    previouslyFocused.current = document.activeElement as HTMLElement;
+
+    // Move focus into the modal (to the close button).
+    closeBtnRef.current?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      // Focus trap: when Tab or Shift+Tab is pressed, keep focus
+      // cycling within the modal.
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
-    document.addEventListener("keydown", onEsc);
-    return () => document.removeEventListener("keydown", onEsc);
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      // Restore focus to the element that opened the modal.
+      previouslyFocused.current?.focus();
+    };
   }, [open, onClose]);
 
   const copy = (text: string, key: string) => {
@@ -47,6 +85,7 @@ export default function DetailModal({ open, block, txDetail, loadingTx, onClose 
           onClick={onClose}
         >
           <motion.div
+            ref={dialogRef}
             initial={{ scale: 0.95, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.95, y: 20 }}
@@ -90,6 +129,7 @@ export default function DetailModal({ open, block, txDetail, loadingTx, onClose 
               </div>
               <button
                 type="button"
+                ref={closeBtnRef}
                 onClick={onClose}
                 className="rounded-full p-2 transition-colors hover:bg-[var(--clr-bg-hover)]"
                 aria-label="Close"
@@ -314,7 +354,7 @@ export function TxDetailContent({
       )}
       <Row label="Raw JSON" copied={copied} onCopy={onCopy}>
         <a
-          href={`https://api.nerva.one/daemon/explorer/index.php?endpoint=get_transactions&hash[]=${txDetail.tx_hash || txDetail.id_hash}`}
+          href={`${config.apiEndpoint}?endpoint=get_transactions&hash[]=${txDetail.tx_hash || txDetail.id_hash}`}
           target="_blank"
           rel="noreferrer"
           className="text-xs underline"

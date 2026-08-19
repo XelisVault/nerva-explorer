@@ -7,10 +7,25 @@
 
 import { config } from "@/config/config";
 
-// When using the built-in server proxy (recommended), the browser hits /api/rpc
-// and the proxy forwards to config.apiEndpoint. Otherwise the browser calls
-// config.apiEndpoint directly (requires CORS to be open on the upstream).
-const API_BASE = config.useServerProxy ? "/api/rpc" : config.apiEndpoint;
+// Determine the API base URL.
+//
+// On the client (browser): use the server-side proxy at /api/rpc so the
+// browser never hits the upstream directly (avoids CORS, adds caching).
+// The proxy path is prefixed with NEXT_PUBLIC_BASE_PATH if set, so
+// subpath deploys (/explorer/) work correctly.
+//
+// On the server (server components, route handlers): fetch the upstream
+// directly via config.apiEndpoint. Node's fetch cannot resolve relative
+// URLs like "/api/rpc", so we must use the absolute upstream URL when
+// running server-side. This is what makes /block/[id] and /tx/[hash]
+// deep links work on cold loads (refresh, shared links).
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const API_BASE =
+  typeof window === "undefined"
+    ? config.apiEndpoint
+    : config.useServerProxy
+      ? `${basePath}/api/rpc`
+      : config.apiEndpoint;
 
 // Coin configuration - exported for use across the app (formatters, tools, etc.)
 export const COIN_CONFIG = config.coin;

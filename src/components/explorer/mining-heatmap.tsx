@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { type BlockHeader, COIN_CONFIG } from "@/lib/nerva-api";
+import { type BlockHeader } from "@/lib/nerva-api";
 
 type Props = {
   blocks: BlockHeader[];
