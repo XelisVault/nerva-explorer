@@ -40,10 +40,21 @@ export default function BlockFlow({ blocks, onSelectBlock }: Props) {
                       color: hasTxs ? "var(--clr-accent)" : "var(--clr-text-muted)",
                       background: hasTxs ? "var(--clr-bg-secondary)" : "transparent",
                     }}
-                    title={`Block #${block.height} — ${formatBlockTime(block.timestamp).abs}`}
+                    title={`Block #${block.height} — ${formatBlockTime(block.timestamp).abs}${hasTxs ? ` · ${block.num_txes} tx` : ""}`}
                   >
                     {block.height.toLocaleString()}
-                    {hasTxs && <span className="ml-1 text-[9px]">·{block.num_txes}</span>}
+                    {hasTxs && (
+                      <span
+                        className="ml-1.5 inline-flex items-center px-1 py-0.5 rounded text-[8px] font-semibold leading-none"
+                        style={{
+                          background: "var(--clr-accent)",
+                          color: "var(--clr-bg-surface)",
+                        }}
+                        aria-label={`${block.num_txes} transaction${block.num_txes > 1 ? "s" : ""} in this block`}
+                      >
+                        {block.num_txes} tx
+                      </span>
+                    )}
                   </motion.button>
                 );
               })}

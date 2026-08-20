@@ -323,7 +323,7 @@ export function TxDetailContent({
       {txDetail.fee !== undefined && (
         <Row label="Fee" copyValue={String(txDetail.fee)} copyKey="fee" copied={copied} onCopy={onCopy}>
           <span className="font-semibold" style={{ color: "#f59e0b" }}>
-            {decimalUnits(txDetail.fee).toFixed(6)} XNV
+            {decimalUnits(txDetail.fee).toFixed(8)} XNV
           </span>
         </Row>
       )}

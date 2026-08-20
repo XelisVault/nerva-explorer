@@ -60,6 +60,7 @@ export default function NetworkStats({ networkInfo, blocks, generatedCoins, load
           style={{ borderColor: "var(--clr-border)", background: "var(--clr-bg-surface)" }}>
           <BlockClock
             lastBlockTimestamp={lastBlock ? lastBlock.timestamp : null}
+            tipHash={lastBlock ? lastBlock.hash : null}
             blockTarget={COIN_CONFIG.blockTarget}
           />
           <div className="hidden sm:block h-6 w-px" style={{ background: "var(--clr-border)" }} />

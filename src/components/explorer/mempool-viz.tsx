@@ -19,29 +19,35 @@ export default function MempoolVisualization({ txPool, onSelectTx, networkInfo }
   // Nerva default (600000) if not available.
   const blockSizeLimit = networkInfo?.block_size_limit || 600000;
 
-  // Compute the sorted list and the "fits in next block" flag in a single
-  // pass using reduce, so we never mutate a variable during render (which
-  // trips react-hooks/immutability and can double-count under React
-  // concurrent/double-invoke behavior).
-  const { sorted, totalWeight } = txPool.reduce(
+  // Step 1: compute the fee rate for each tx and sort by fee rate descending
+  // (highest priority first — miners fill highest-fee-first).
+  // We must sort BEFORE running the cumulative-weight pass, otherwise the
+  // inNextBlock highlight does not reflect fee-priority selection.
+  const sortedByFee = txPool
+    .map((tx) => ({
+      ...tx,
+      feeRate: tx.weight > 0 ? (decimalUnits(tx.fee) * 1024) / tx.weight : 0,
+    }))
+    .sort((a, b) => b.feeRate - a.feeRate);
+
+  // Step 2: walk the fee-sorted list (single pass via reduce) and determine
+  // which txs fit in the next block (cumulative weight <= block_size_limit).
+  // This reflects the actual mining selection: highest fee rate first, until
+  // the block is full. Using reduce keeps the render pure (no let mutation).
+  const { sorted, totalWeight } = sortedByFee.reduce<{
+    sorted: PoolEntry[];
+    cumulativeWeight: number;
+    totalWeight: number;
+  }>(
     (acc, tx) => {
-      const feeRate = tx.weight > 0 ? (decimalUnits(tx.fee) * 1024) / tx.weight : 0;
-      const newCumulative = acc.cumulativeWeight + (tx.weight || 0);
-      const inNextBlock = newCumulative <= blockSizeLimit;
-      acc.sorted.push({ ...tx, feeRate, inNextBlock });
-      acc.cumulativeWeight = newCumulative;
       acc.totalWeight += tx.weight || 0;
+      acc.cumulativeWeight += tx.weight || 0;
+      const inNextBlock = acc.cumulativeWeight <= blockSizeLimit;
+      acc.sorted.push({ ...tx, inNextBlock });
       return acc;
     },
-    {
-      sorted: [] as PoolEntry[],
-      cumulativeWeight: 0,
-      totalWeight: 0,
-    }
+    { sorted: [], cumulativeWeight: 0, totalWeight: 0 }
   );
-
-  // Sort by fee rate descending (highest priority first)
-  sorted.sort((a, b) => b.feeRate - a.feeRate);
 
   if (sorted.length === 0) {
     return (
@@ -77,7 +83,7 @@ export default function MempoolVisualization({ txPool, onSelectTx, networkInfo }
               onClick={() => onSelectTx(tx.id_hash)}
               className="w-full flex items-center gap-2 px-2 py-1 rounded text-[11px] hover:bg-[var(--clr-bg-hover)] transition-colors cursor-pointer"
               style={{ borderLeft: tx.inNextBlock ? "2px solid var(--clr-accent)" : "2px solid transparent" }}
-              title={`Fee: ${decimalUnits(tx.fee).toFixed(6)} XNV · ${tx.weight} bytes`}
+              title={`Fee: ${decimalUnits(tx.fee).toFixed(8)} XNV · ${tx.weight} bytes`}
             >
               <span className="hash flex-shrink-0" style={{ color: "var(--clr-text-muted)" }}>
                 {tx.id_hash.slice(0, 10)}...
@@ -87,7 +93,7 @@ export default function MempoolVisualization({ txPool, onSelectTx, networkInfo }
                 {tx.weight || 0} B
               </span>
               <span className="font-mono font-medium" style={{ color: tx.inNextBlock ? "var(--clr-accent)" : "var(--clr-text-muted)" }}>
-                {tx.feeRate.toFixed(4)}
+                {tx.feeRate.toFixed(8)}
               </span>
             </motion.button>
           ))}

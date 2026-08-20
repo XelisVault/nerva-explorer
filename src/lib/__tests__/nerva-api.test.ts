@@ -200,24 +200,27 @@ describe("getTxPool", () => {
     const pool: TxPoolEntry[] = [
       {
         id_hash: "tx1", fee: 1000, receive_time: 1700000000, weight: 1,
-        kept_by_block: false, last_failed_id_hash: "", last_failed_height: 0,
-        max_used_block_hash: "", max_used_block_height: 0, relayed: true,
-        tx_blob: "", do_not_relay: false, double_spend_seen: false,
+        blob_size: 100, kept_by_block: false, last_failed_id_hash: "",
+        last_failed_height: 0, last_relayed_time: 1700000000,
+        max_used_block_height: 0, relayed: true,
+        do_not_relay: false, double_spend_seen: false,
       },
     ];
     mockFetch(() => ({ text: JSON.stringify(pool) }));
     const out = await getTxPool();
     assert.equal(out.length, 1);
     assert.equal(out[0].id_hash, "tx1");
+    assert.equal(out[0].blob_size, 100);
   });
 
   test("parses {\"transactions\":[...]} wrapper", async () => {
     const pool: TxPoolEntry[] = [
       {
         id_hash: "tx2", fee: 2000, receive_time: 1700000001, weight: 2,
-        kept_by_block: false, last_failed_id_hash: "", last_failed_height: 0,
-        max_used_block_hash: "", max_used_block_height: 0, relayed: true,
-        tx_blob: "", do_not_relay: false, double_spend_seen: false,
+        blob_size: 200, kept_by_block: false, last_failed_id_hash: "",
+        last_failed_height: 0, last_relayed_time: 1700000001,
+        max_used_block_height: 0, relayed: true,
+        do_not_relay: false, double_spend_seen: false,
       },
     ];
     mockFetch(() => ({ text: JSON.stringify({ transactions: pool }) }));
@@ -230,9 +233,10 @@ describe("getTxPool", () => {
     const pool: TxPoolEntry[] = [
       {
         id_hash: "tx3", fee: 3000, receive_time: 0, weight: 3,
-        kept_by_block: false, last_failed_id_hash: "", last_failed_height: 0,
-        max_used_block_hash: "", max_used_block_height: 0, relayed: true,
-        tx_blob: "", do_not_relay: false, double_spend_seen: false,
+        blob_size: 300, kept_by_block: false, last_failed_id_hash: "",
+        last_failed_height: 0, last_relayed_time: 0,
+        max_used_block_height: 0, relayed: true,
+        do_not_relay: false, double_spend_seen: false,
       },
     ];
     const prefixed =

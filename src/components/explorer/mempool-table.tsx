@@ -114,7 +114,7 @@ export default function MempoolTable({ txPool, loading, onSelectTx }: Props) {
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-right text-sm font-semibold whitespace-nowrap" style={{ color: "var(--clr-text)" }}>
-                                {decimalUnits(tx.fee).toFixed(6)} XNV
+                                {decimalUnits(tx.fee).toFixed(8)} XNV
                               </td>
                               <td className="px-4 py-3 text-right text-sm" style={{ color: "var(--clr-text-muted)" }}>
                                 {tx.weight}
@@ -141,7 +141,7 @@ export default function MempoolTable({ txPool, loading, onSelectTx }: Props) {
                           {time}
                         </span>
                         <span className="text-sm font-semibold" style={{ color: "var(--clr-text)" }}>
-                          {decimalUnits(tx.fee).toFixed(6)} XNV
+                          {decimalUnits(tx.fee).toFixed(8)} XNV
                         </span>
                       </div>
                       <div className="mt-1 hash hash-truncate text-xs" style={{ color: "var(--clr-accent)" }}>

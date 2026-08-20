@@ -20,7 +20,7 @@ export const config = {
     symbol: "XNV",
     unitPlaces: 12,
     blockTarget: 60, // seconds
-    updateInterval: 15000, // ms - auto-refresh interval
+    updateInterval: 5000, // ms - auto-refresh interval (get_info is no-store and tiny, 5s lets the counter track the network within a few seconds)
     // Tail emission floor reward per block.
     // From FINAL_SUBSIDY_PER_MINUTE in src/cryptonote_config.h:
     // 300000000000 atomic units = 0.3 XNV per minute = 0.3 XNV per block

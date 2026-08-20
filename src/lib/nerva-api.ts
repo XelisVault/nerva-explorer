@@ -77,15 +77,17 @@ export type TxPoolEntry = {
   fee: number;
   receive_time: number;
   weight: number;
+  blob_size: number;
   kept_by_block: boolean;
   last_failed_id_hash: string;
   last_failed_height: number;
-  max_used_block_hash: string;
+  last_relayed_time: number;
   max_used_block_height: number;
   relayed: boolean;
-  tx_blob: string;
   do_not_relay: boolean;
   double_spend_seen: boolean;
+  // raw JSON payload from the daemon (present in the response but unused by the UI)
+  json?: unknown;
 };
 
 // Transaction detail returned by get_transactions.
